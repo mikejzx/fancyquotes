@@ -1,0 +1,42 @@
+fancyquotes
+===========
+
+https://github.com/mikejzx/fancyquotes.git
+
+This is a simple utility for converting standard quotation marks (and
+apostrophes) to "typographer's quotes".
+
+fancyquotes is intended to be used as a post-processer for roff documents. The
+code can be easily modified to replace with unicode quotes too. (May add an
+option in future).
+
+USAGE:
+
+  fancyquotes <filename>
+
+fancyquotes can also read from standard input, e.g.:
+
+  echo "Hello" | fancyquotes
+
+
+EXAMPLE OUTPUT:
+
+Shown below are some examples of output produced by fancyquotes.
+
+  These are 'single quotes', and these are "double quotes"
+    becomes
+  These are \[oq]single quotes\[cq], and these are \[lq]double quotes\[rq].
+
+  We'd, it's, you'd, 'till, 'cause, etc.
+    becomes
+  We\[cq]d, it\[cq]s, you\[cq]d, \[oq]till, \[oq]cause, etc.
+
+NOTE: since this is designed for roff documents, line which are macros
+themselves will be left unchanged. For example, lines such as the following
+will be ignored:
+  .B "This is a test"
+  .IP "You'd have to manually change these if you want fancy quotes"
+
+LIMITATIONS:
+* Currently, fancyquotes only works on files with lines that are shorter than
+  1024 bytes in length! This still needs to be fixed.
