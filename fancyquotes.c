@@ -17,10 +17,54 @@ typedef struct line_buf
     line *head, *tail;
 } line_buf;
 
+// Different methods of output
+const int
+    OUTPUT_ROFF = 0,
+    OUTPUT_UNICODE = 1,
+    OUTPUT_HTML = 2;
+
+// Different quote types
+// Format: LDQ, RDQ, LSQ, RSQ
+static const char *QUOTE_SET[3][4] =
+{
+    // Roff
+    {
+        "\\[lq]",
+        "\\[rq]",
+        "\\[oq]",
+        "\\[cq]"
+    },
+    // Unicode
+    {
+        "“",
+        "”",
+        "‘",
+        "’"
+    },
+    // HTML
+    {
+        "&ldquo;",
+        "&rdquo;",
+        "&lsquo;",
+        "&rsquo;"
+    }
+};
+
+// ... and indices for above.
+static const int
+    QUOTE_LD = 0,
+    QUOTE_RD = 1,
+    QUOTE_LS = 2,
+    QUOTE_RS = 3;
+
 // Function prototypes
 int  line_add(line_buf*, char*);
 void process_line(char**);
 void replace_char(char**, int, const char*);
+int  cmdline(int argc, char *argv[]);
+
+static int output_method = OUTPUT_UNICODE;
+static int roff_clever = 0;
 
 /*
  * Entry point of the program
@@ -29,13 +73,16 @@ void replace_char(char**, int, const char*);
  */
 int main(int argc, char *argv[])
 {
+    // Read command line options
+    int fileidx = cmdline(argc, argv);
+
     // Initialise line buffer
     line_buf *buf = malloc(sizeof(line_buf));
     assert(buf);
     memset(buf, 0, sizeof(line_buf));
 
     // Read input into buffer
-    if (argc < 2)
+    if (fileidx == -1)
     {
         // Read from stdin
         size_t len;
@@ -44,10 +91,10 @@ int main(int argc, char *argv[])
     else
     {
         // Open file that user provided
-        FILE *fp = fopen(argv[1], "rb");
+        FILE *fp = fopen(argv[fileidx], "rb");
         if (!fp)
         {
-            fprintf(stderr, "fancyquotes: %s: No such file\n", argv[1]);
+            fprintf(stderr, "fancyquotes: %s: No such file\n", argv[fileidx]);
             exit(-1);
         }
 
@@ -59,8 +106,11 @@ int main(int argc, char *argv[])
     }
 
     // Regex for determining if a line is a roff macro or not.
-    static regex_t regex;
-    regcomp(&regex, "^\\.", 0);
+    static regex_t tmac_regex;
+    if (output_method == OUTPUT_ROFF)
+    {
+        regcomp(&tmac_regex, "^\\.", 0);
+    }
 
     // Process buffer
     for (line *l = buf->head; l; l = l->next)
@@ -70,14 +120,17 @@ int main(int argc, char *argv[])
         strcpy(line, l->data);
         line[strcspn(line, "\n")] = 0;
 
-        // For now we only apply fancy quotes in text which doesn't begin with
+        // (Roff): For now we only apply fancy quotes in text which doesn't begin with
         // any kind of roff macro. This is needed to ensure that things like
         //   .B "Some text"
         // don't break because of quote replacement.
-        int is_macro = regexec(&regex, line, 0, NULL, 0) == 0;
+        int skip_tmac =
+            output_method == OUTPUT_ROFF &&
+            roff_clever &&
+            (regexec(&tmac_regex, line, 0, NULL, 0) == 0);
 
         // Process the line
-        if (strlen(line) > 0 && !is_macro)
+        if (strlen(line) > 0 && !skip_tmac)
         {
             process_line(&line);
         }
@@ -113,11 +166,11 @@ void process_line(char **ln)
     int last_d = -1,
         last_s = -1;
 
-    static const char
-        *LDQ = "\\[lq]",
-        *RDQ = "\\[rq]",
-        *LSQ = "\\[oq]",
-        *RSQ = "\\[cq]";
+    const char
+        *LDQ = QUOTE_SET[output_method][QUOTE_LD],
+        *RDQ = QUOTE_SET[output_method][QUOTE_RD],
+        *LSQ = QUOTE_SET[output_method][QUOTE_LS],
+        *RSQ = QUOTE_SET[output_method][QUOTE_RS];
 
     for (unsigned i = 0; i < strlen(line); ++i)
     {
@@ -235,9 +288,8 @@ int line_add(line_buf *buf, char *data)
     line *newl = malloc(sizeof(line));
     assert(newl);
 
-    size_t size = strlen(data);
-    newl->data = malloc(size + 1);
-    strncpy(newl->data, data, size);
+    newl->data = malloc(strlen(data) + 1);
+    strcpy(newl->data, data);
     newl->next = 0;
 
     // Set tail of buffer
@@ -253,4 +305,78 @@ int line_add(line_buf *buf, char *data)
     buf->tail = newl;
 
     return 1;
+}
+
+/*
+ * Interpret command-line arguments
+ *
+ * @param argc  Argument count
+ * @param argv  Argument array
+ *
+ * @return position of filename argument if one was provided
+ *         and -1 if not.
+ */
+int cmdline(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        return -1;
+    }
+
+    // Help
+    if (strcmp(argv[1], "--help") == 0)
+    {
+        printf("Usage: fancyquotes [OPTION]... [FILE]\n");
+        printf("\n");
+        printf("Arguments:\n");
+        printf("      --help     show this help info.\n\n");
+        printf("  -u, --unicode  replace with unicode quotes (default)\n\n");
+        printf("  -r, --roff     process for use with roff documents.\n\n");
+        printf("  -h, --html     replace with HTML quotes\n\n");
+        printf("  -c, --clever   (roff only) attempts to preserve quotes\n");
+        printf("                 in roff macros (use this if running on\n");
+        printf("                 whole roff documents).\n");
+        exit(0);
+    }
+
+    int idx = 1;
+
+    // "roff" output
+    if (strcmp(argv[1], "-r") == 0 ||
+        strcmp(argv[1], "--roff") == 0)
+    {
+        output_method = OUTPUT_ROFF;
+        ++idx;
+    }
+
+    // "unicode" output
+    else if (strcmp(argv[1], "-u") == 0 ||
+        strcmp(argv[1], "--unicode") == 0)
+    {
+        output_method = OUTPUT_UNICODE;
+        ++idx;
+    }
+
+    // "html" output
+    else if (strcmp(argv[1], "-h") == 0 ||
+        strcmp(argv[1], "--html") == 0)
+    {
+        output_method = OUTPUT_HTML;
+        ++idx;
+    }
+
+    // "clever" roff mode
+    if (strcmp(argv[idx], "-c") == 0 ||
+        strcmp(argv[idx], "--clever") == 0)
+    {
+        roff_clever = 1;
+        ++idx;
+    }
+
+    // Return either filename or -1
+    if (idx < argc)
+    {
+        return idx;
+    }
+    return -1;
 }

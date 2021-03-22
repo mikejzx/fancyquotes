@@ -1,6 +1,6 @@
 PROJECT = fancyquotes
 OUT = $(PROJECT)
-FLAGS = -D_GNU_SOURCE
+CFLAGS = -std=c18 -Wall -D_GNU_SOURCE -O3
 
 all: $(OUT)
 
@@ -16,6 +16,6 @@ test: $(OUT)
 		&& zathura ./test.pdf
 
 $(OUT): $(PROJECT).c
-	gcc $(PROJECT).c -o $(OUT) $(FLAGS)
+	gcc $(PROJECT).c -o $(OUT) $(CFLAGS)
 
 .PHONY: all clean
