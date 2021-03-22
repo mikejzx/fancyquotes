@@ -332,51 +332,52 @@ int cmdline(int argc, char *argv[])
         printf("      --help     show this help info.\n\n");
         printf("  -u, --unicode  replace with unicode quotes (default)\n\n");
         printf("  -r, --roff     process for use with roff documents.\n\n");
+        printf("  -c, --clever   (roff mode only) attempts to preserve quotes in roff macros\n");
+        printf("                 (use this if running on whole roff documents).\n");
         printf("  -h, --html     replace with HTML quotes\n\n");
-        printf("  -c, --clever   (roff only) attempts to preserve quotes\n");
-        printf("                 in roff macros (use this if running on\n");
-        printf("                 whole roff documents).\n");
         exit(0);
     }
 
-    int idx = 1;
-
-    // "roff" output
-    if (strcmp(argv[1], "-r") == 0 ||
-        strcmp(argv[1], "--roff") == 0)
+    unsigned file = -1;
+    for (unsigned idx = 1; idx < argc; ++idx)
     {
-        output_method = OUTPUT_ROFF;
-        ++idx;
+        // "roff" output
+        if (strcmp(argv[idx], "-r") == 0 ||
+            strcmp(argv[idx], "--roff") == 0)
+        {
+            output_method = OUTPUT_ROFF;
+            continue;
+        }
+
+        // "unicode" output
+        if (strcmp(argv[idx], "-u") == 0 ||
+            strcmp(argv[idx], "--unicode") == 0)
+        {
+            output_method = OUTPUT_UNICODE;
+            continue;
+        }
+
+        // "html" output
+        if (strcmp(argv[idx], "-h") == 0 ||
+            strcmp(argv[idx], "--html") == 0)
+        {
+            output_method = OUTPUT_HTML;
+            continue;
+        }
+
+        // "clever" roff mode
+        if (strcmp(argv[idx], "-c") == 0 ||
+            strcmp(argv[idx], "--clever") == 0)
+        {
+            roff_clever = 1;
+            continue;
+        }
+
+        if (file == -1)
+        {
+            file = idx;
+        }
     }
 
-    // "unicode" output
-    else if (strcmp(argv[1], "-u") == 0 ||
-        strcmp(argv[1], "--unicode") == 0)
-    {
-        output_method = OUTPUT_UNICODE;
-        ++idx;
-    }
-
-    // "html" output
-    else if (strcmp(argv[1], "-h") == 0 ||
-        strcmp(argv[1], "--html") == 0)
-    {
-        output_method = OUTPUT_HTML;
-        ++idx;
-    }
-
-    // "clever" roff mode
-    if (strcmp(argv[idx], "-c") == 0 ||
-        strcmp(argv[idx], "--clever") == 0)
-    {
-        roff_clever = 1;
-        ++idx;
-    }
-
-    // Return either filename or -1
-    if (idx < argc)
-    {
-        return idx;
-    }
-    return -1;
+    return file;
 }

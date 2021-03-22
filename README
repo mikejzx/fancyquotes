@@ -4,24 +4,34 @@ fancyquotes
 https://github.com/mikejzx/fancyquotes.git
 
 This is a simple utility for converting standard quotation marks (and
-apostrophes) to "typographer's quotes".
-
-fancyquotes is intended to be used as a post-processer for roff documents. The
-code can be easily modified to replace with unicode quotes too. (May add an
-option in future).
+apostrophes) to "typographer's quotes". This program was originally intended as
+a postprocessor for roff documents.
 
 USAGE:
 
-  fancyquotes <filename>
+  fancyquotes [OPTION] <filename>
 
 fancyquotes can also read from standard input, e.g.:
 
   echo "Hello" | fancyquotes
 
+OPTIONS:
+
+      --help     show help info.
+
+  -u, --unicode  replace with unicode quotes (default)
+
+  -r, --roff     process for use with roff documents.
+
+  -c, --clever   (roff mode only) attempts to preserve quotes in roff macros
+                 (use this if running on whole roff documents).
+
+  -h, --html     replace with HTML quotes.
+
 
 EXAMPLE OUTPUT:
 
-Shown below are some examples of output produced by fancyquotes.
+Shown below are some examples of output produced by fancyquotes (in roff mode)
 
   These are 'single quotes', and these are "double quotes"
     becomes
@@ -31,12 +41,10 @@ Shown below are some examples of output produced by fancyquotes.
     becomes
   We\[cq]d, it\[cq]s, you\[cq]d, \[oq]till, \[oq]cause, etc.
 
-NOTE: since this is designed for roff documents, line which are macros
-themselves will be left unchanged. For example, lines such as the following
-will be ignored:
+"Clever mode" in roff:
+Passing --clever or -c will make fancyquotes work a little better on whole roff
+documents, by leaving lines beginning with macros unchanged, e.g.:
   .B "This is a test"
   .IP "You'd have to manually change these if you want fancy quotes"
-
-LIMITATIONS:
-* Currently, fancyquotes only works on files with lines that are shorter than
-  1024 bytes in length! This still needs to be fixed.
+Currently this does not work with preprocessors such as EQN or TBL, so keep
+that in mind! (May add functionality in future)
