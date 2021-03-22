@@ -38,11 +38,8 @@ int main(int argc, char *argv[])
     if (argc < 2)
     {
         // Read from stdin
-        // TODO: allow arbitrary line lengths
-        for (char tmp[1024]; fgets(tmp, sizeof(tmp), stdin);)
-        {
-            line_add(buf, tmp);
-        }
+        size_t len;
+        for (char *line; getline(&line, &len, stdin) != -1; line_add(buf, line));
     }
     else
     {
@@ -55,7 +52,7 @@ int main(int argc, char *argv[])
         }
 
         // Read from file.
-        size_t len = 0;
+        size_t len;
         for (char *line; getline(&line, &len, fp) != -1; line_add(buf, line));
 
         fclose(fp);
