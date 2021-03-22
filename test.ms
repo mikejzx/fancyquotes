@@ -4,6 +4,8 @@ This is a "test".
 A 'test', a 'test, a "test", and test'
 .B "Testing"
 .
-.EQ
-'TODO: somehow fix stuff like this in "clever" mode!'
+.EQ L
+y' = x' + 2
 .EN
+.LP
+This is a "test."

@@ -5,7 +5,7 @@ https://github.com/mikejzx/fancyquotes.git
 
 This is a simple utility for converting standard quotation marks (and
 apostrophes) to "typographer's quotes". This program was originally intended as
-a postprocessor for roff documents.
+a postprocessor for roff documents and thus has some features specific to roff.
 
 USAGE:
 
@@ -41,10 +41,16 @@ Shown below are some examples of output produced by fancyquotes (in roff mode)
     becomes
   We\[cq]d, it\[cq]s, you\[cq]d, \[oq]till, \[oq]cause, etc.
 
-"Clever mode" in roff:
+"Clever" mode (for roff documents):
 Passing --clever or -c will make fancyquotes work a little better on whole roff
-documents, by leaving lines beginning with macros unchanged, e.g.:
+(designed for ms macros) documents, by leaving lines beginning with macros
+unchanged, e.g.:
+
   .B "This is a test"
   .IP "You'd have to manually change these if you want fancy quotes"
-Currently this does not work with preprocessors such as EQN or TBL, so keep
-that in mind! (May add functionality in future)
+
+Also, text which are in preprocessor blocks (.TS, .TE, .PS, .PE, etc.) are left
+unchanged. This is to prevent screwing up important quotes in tbl settings, and
+quotes for mathematical equations in eqn.
+  The implementation is fairly basic at the moment, so please open an issue if
+you encounter any bugs.

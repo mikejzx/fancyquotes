@@ -105,12 +105,20 @@ int main(int argc, char *argv[])
         fclose(fp);
     }
 
-    // Regex for determining if a line is a roff macro or not.
-    static regex_t tmac_regex;
+    // Regexes for roff docs determining if line should be skipped.
+    static regex_t
+        regex_roff_mac,
+        regex_roff_pre_start,
+        regex_roff_pre_end;
     if (output_method == OUTPUT_ROFF)
     {
-        regcomp(&tmac_regex, "^\\.", 0);
+        regcomp(&regex_roff_mac,       "^\\.", 0);
+        regcomp(&regex_roff_pre_start, "^\\.(TS|EQ|PS)(\\s|$)", REG_EXTENDED);
+        regcomp(&regex_roff_pre_end,   "^\\.(TE|EN|PE)(\\s|$)", REG_EXTENDED);
     }
+
+    // If we are in a preprocessor block like eqn, tbl, etc.
+    int is_roff_preprocessor = 0;
 
     // Process buffer
     for (line *l = buf->head; l; l = l->next)
@@ -120,17 +128,32 @@ int main(int argc, char *argv[])
         strcpy(line, l->data);
         line[strcspn(line, "\n")] = 0;
 
-        // (Roff): For now we only apply fancy quotes in text which doesn't begin with
-        // any kind of roff macro. This is needed to ensure that things like
-        //   .B "Some text"
-        // don't break because of quote replacement.
-        int skip_tmac =
-            output_method == OUTPUT_ROFF &&
-            roff_clever &&
-            (regexec(&tmac_regex, line, 0, NULL, 0) == 0);
+        // Roff 'clever mode' tests
+        int skip_roff = 0;
+        if (output_method == OUTPUT_ROFF && roff_clever)
+        {
+            // (Roff) Check for preprocessor blocks
+            if (!is_roff_preprocessor &&
+                regexec(&regex_roff_pre_start, line, 0, NULL, 0) == 0)
+            {
+                is_roff_preprocessor = 1;
+            }
+            else if (regexec(&regex_roff_pre_end, line, 0, NULL, 0) == 0)
+            {
+                is_roff_preprocessor = 0;
+            }
+
+            // (Roff): For now we only apply fancy quotes in text which doesn't
+            // begin with any kind of roff macro. This is needed to ensure that
+            // things like
+            //   .B "Some text"
+            // don't break because of quote replacement.
+            skip_roff = is_roff_preprocessor ||
+                (regexec(&regex_roff_mac, line, 0, NULL, 0) == 0);
+        }
 
         // Process the line
-        if (strlen(line) > 0 && !skip_tmac)
+        if (strlen(line) > 0 && !skip_roff)
         {
             process_line(&line);
         }
